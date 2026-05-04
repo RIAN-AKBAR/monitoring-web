@@ -5,7 +5,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 interface WebsiteStatus {
   name: string;
   url: string;
-  status: 'up' | 'down';
+  status: 'up' | 'down' | 'warning';
   responseTime: number;
   ping: number;
   lastChecked: string;
@@ -81,10 +81,12 @@ export default function Home() {
       else if (responseTime > 500) performanceScore = 80;
       else if (responseTime > 200) performanceScore = 90;
       
-      // Additional penalty for non-200 status
-      if (response.status !== 200) performanceScore -= 20;
-      
-      const status = response.status === 200 ? 'up' : 'warning';
+      // Determine status
+      let status: 'up' | 'down' | 'warning' = 'up';
+      if (response.status !== 200) {
+        status = 'warning';
+        performanceScore -= 20;
+      }
       
       // Add log for status change
       const logMessage = `[${new Date().toLocaleTimeString()}] ${website.name} - Status: ${status.toUpperCase()} (${response.status}) - Response: ${Math.round(responseTime)}ms - Ping: ${pingTime}ms`;
@@ -92,7 +94,7 @@ export default function Home() {
       
       return {
         ...website,
-        status: status as 'up' | 'down',
+        status: status,
         responseTime: Math.round(responseTime),
         ping: pingTime,
         lastChecked: new Date().toLocaleTimeString(),
@@ -242,7 +244,7 @@ export default function Home() {
               
               <div className="space-y-3">
                 {/* HTTP Status Code */}
-                {site.statusCode && (
+                {site.statusCode && site.statusCode > 0 && (
                   <div className="flex justify-between items-center">
                     <p className="text-gray-400 text-sm">HTTP Status</p>
                     <p className={`font-mono font-semibold ${
