@@ -3,17 +3,71 @@ import axios from 'axios';
 
 export default function Home() {
   const [websites, setWebsites] = useState([
-    { name: 'Web Islam', url: 'https://web-islam.vercel.app', status: 'checking', responseTime: 0, ping: 0, performance: 0 },
-    { name: 'Produk Garage', url: 'https://produk-garage.vercel.app', status: 'checking', responseTime: 0, ping: 0, performance: 0 },
-    { name: 'Kanshi Craft', url: 'https://kanshi-craft-merchandise.vercel.app', status: 'checking', responseTime: 0, ping: 0, performance: 0 },
+    { 
+      name: 'Produk Garage', 
+      url: 'https://produk-garage.vercel.app', 
+      domain: 'produk-garage.vercel.app',
+      status: 'checking', 
+      responseTime: 0, 
+      ping: 0, 
+      performance: 0,
+      visitors: 0,
+      totalToday: 0,
+      icon: '🏭',
+      color: '#3b82f6'
+    },
+    { 
+      name: 'Produk HRS', 
+      url: 'https://produk-hrs.vercel.app', 
+      domain: 'produk-hrs.vercel.app',
+      status: 'checking', 
+      responseTime: 0, 
+      ping: 0, 
+      performance: 0,
+      visitors: 0,
+      totalToday: 0,
+      icon: '⚡',
+      color: '#8b5cf6'
+    },
+    { 
+      name: 'CDP Team', 
+      url: 'https://cdp-team.vercel.app', 
+      domain: 'cdp-team.vercel.app',
+      status: 'checking', 
+      responseTime: 0, 
+      ping: 0, 
+      performance: 0,
+      visitors: 0,
+      totalToday: 0,
+      icon: '👥',
+      color: '#f59e0b'
+    },
+    { 
+      name: 'ASC Garage', 
+      url: 'https://asc-garage.vercel.app', 
+      domain: 'asc-garage.vercel.app',
+      status: 'checking', 
+      responseTime: 0, 
+      ping: 0, 
+      performance: 0,
+      visitors: 0,
+      totalToday: 0,
+      icon: '🚗',
+      color: '#10b981'
+    },
   ]);
   
-  const [activeVisitors, setActiveVisitors] = useState(0);
-  const [totalVisitors, setTotalVisitors] = useState(0);
-  const [recentVisitors, setRecentVisitors] = useState([]);
+  const [logs, setLogs] = useState([]);
   const [lastUpdate, setLastUpdate] = useState(new Date());
+  const [totalActiveVisitors, setTotalActiveVisitors] = useState(0);
+  const [isClient, setIsClient] = useState(false);
 
-  // Check website function
+  // Fix hydration: hanya render di client
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  // Check website performance
   const checkWebsite = async (website) => {
     const startTime = Date.now();
     try {
@@ -44,149 +98,246 @@ export default function Home() {
     }
   };
 
-  // Check all websites
-  const checkAllWebsites = async () => {
-    const results = await Promise.all(websites.map(checkWebsite));
-    setWebsites(results);
+  // Get visitor stats untuk setiap website
+  const getVisitorStats = async (domain) => {
+    try {
+      const response = await axios.get(`/api/track-visitor?website=${domain}`);
+      return {
+        visitors: response.data.activeVisitors || 0,
+        totalToday: response.data.totalVisitorsToday || 0
+      };
+    } catch (error) {
+      return { visitors: 0, totalToday: 0 };
+    }
+  };
+
+  // Update semua data
+  const updateAllData = async () => {
+    const performanceResults = await Promise.all(websites.map(checkWebsite));
+    const visitorStats = await Promise.all(
+      websites.map(w => getVisitorStats(w.domain))
+    );
+    
+    const finalResults = performanceResults.map((site, idx) => ({
+      ...site,
+      visitors: visitorStats[idx].visitors,
+      totalToday: visitorStats[idx].totalToday
+    }));
+    
+    setWebsites(finalResults);
     setLastUpdate(new Date());
-  };
-
-  // Get visitor stats
-  const fetchVisitors = async () => {
-    try {
-      const response = await axios.get('/api/visitors');
-      setActiveVisitors(response.data.activeVisitors || 0);
-      setTotalVisitors(response.data.totalVisitors || 0);
-      setRecentVisitors(response.data.recentVisitors || []);
-    } catch (error) {
-      console.log('Visitor stats not available yet');
-    }
-  };
-
-  // Record current visitor
-  const recordVisitor = async () => {
-    try {
-      const userAgent = navigator.userAgent;
-      let browser = 'Unknown';
-      if (userAgent.includes('Chrome')) browser = 'Chrome';
-      else if (userAgent.includes('Firefox')) browser = 'Firefox';
-      else if (userAgent.includes('Safari')) browser = 'Safari';
-      else if (userAgent.includes('Edge')) browser = 'Edge';
-      
-      await axios.post('/api/visitors', {
-        page: 'Dashboard',
-        browser: browser,
-        os: 'Web'
-      });
-    } catch (error) {
-      console.log('Failed to record visitor');
-    }
+    
+    const total = finalResults.reduce((sum, site) => sum + site.visitors, 0);
+    setTotalActiveVisitors(total);
+    
+    setLogs(prev => [
+      `[${new Date().toLocaleTimeString()}] Total: ${total} visitors | ` + 
+      finalResults.map(s => `${s.name}: ${s.visitors}`).join(' | '),
+      ...prev.slice(0, 19)
+    ]);
   };
 
   useEffect(() => {
-    checkAllWebsites();
-    fetchVisitors();
-    recordVisitor();
-    
-    const interval = setInterval(() => {
-      checkAllWebsites();
-      fetchVisitors();
-    }, 10000);
-    
-    return () => clearInterval(interval);
-  }, []);
+    if (isClient) {
+      updateAllData();
+      const interval = setInterval(updateAllData, 5000);
+      return () => clearInterval(interval);
+    }
+  }, [isClient]);
 
   const getStatusColor = (status) => {
-    if (status === 'up') return 'bg-green-500';
-    if (status === 'warning') return 'bg-yellow-500';
-    return 'bg-red-500';
+    if (status === 'up') return '#4ade80';
+    if (status === 'warning') return '#fbbf24';
+    return '#f87171';
   };
 
   const getStatusText = (status) => {
-    if (status === 'up') return '✓ ONLINE';
-    if (status === 'warning') return '⚠ WARNING';
-    return '✗ OFFLINE';
+    if (status === 'up') return 'ONLINE';
+    if (status === 'warning') return 'WARNING';
+    return 'OFFLINE';
   };
 
-  const getPerformanceColor = (performance) => {
-    if (performance >= 80) return 'bg-green-500';
-    if (performance >= 60) return 'bg-yellow-500';
-    return 'bg-red-500';
+  const getStatusBg = (status) => {
+    if (status === 'up') return 'rgba(74,222,128,0.15)';
+    if (status === 'warning') return 'rgba(251,191,36,0.15)';
+    return 'rgba(248,113,113,0.15)';
   };
+
+  // Render loading di server
+  if (!isClient) {
+    return (
+      <div style={{ 
+        minHeight: '100vh', 
+        background: 'linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: 'white'
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: '48px', marginBottom: '20px' }}>📊</div>
+          <p>Loading Dashboard...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', padding: '20px' }}>
+    <div style={{ 
+      minHeight: '100vh', 
+      background: 'linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%)', 
+      padding: '20px',
+      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+    }}>
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: '30px' }}>
-          <h1 style={{ fontSize: '48px', color: 'white', marginBottom: '10px' }}>🌐 Website Monitor</h1>
-          <p style={{ color: 'rgba(255,255,255,0.9)' }}>Real-time monitoring for your websites</p>
+          <h1 style={{ 
+            fontSize: '42px', 
+            fontWeight: 'bold',
+            background: 'linear-gradient(135deg, #60a5fa 0%, #a78bfa 50%, #f472b6 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            marginBottom: '8px' 
+          }}>
+            📊 Website Monitor
+          </h1>
+          <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '14px' }}>
+            Real-time monitoring for 4 websites with live visitor counts
+          </p>
         </div>
 
-        {/* Visitor Counter */}
+        {/* Total Active Visitors */}
         <div style={{ 
-          background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)', 
-          borderRadius: '20px', 
-          padding: '25px',
-          marginBottom: '30px',
-          boxShadow: '0 10px 40px rgba(0,0,0,0.2)'
+          background: 'linear-gradient(135deg, rgba(96,165,250,0.12) 0%, rgba(167,139,250,0.12) 100%)',
+          backdropFilter: 'blur(10px)',
+          borderRadius: '16px', 
+          padding: '24px',
+          marginBottom: '24px',
+          border: '1px solid rgba(255,255,255,0.06)'
         }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px' }}>
             <div>
-              <h2 style={{ color: 'white', marginBottom: '5px' }}>👥 Real-time Visitors</h2>
-              <p style={{ color: 'rgba(255,255,255,0.8)' }}>People viewing this dashboard NOW</p>
+              <h2 style={{ color: 'rgba(255,255,255,0.6)', marginBottom: '4px', fontSize: '14px', fontWeight: '500' }}>
+                🌐 TOTAL ACTIVE VISITORS
+              </h2>
+              <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: '12px' }}>Across all 4 websites</p>
             </div>
             <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '64px', fontWeight: 'bold', color: 'white' }}>
-                {activeVisitors}
+              <div style={{ fontSize: '56px', fontWeight: 'bold', color: 'white' }}>
+                {totalActiveVisitors}
               </div>
-              <div style={{ display: 'flex', gap: '5px', marginTop: '5px' }}>
-                <div style={{ width: '10px', height: '10px', background: '#4ade80', borderRadius: '50%', animation: 'pulse 1s infinite' }}></div>
-                <span style={{ color: 'white' }}>Active Now</span>
+              <div style={{ display: 'flex', gap: '6px', justifyContent: 'center', marginTop: '4px' }}>
+                <span style={{ 
+                  display: 'inline-block', 
+                  width: '8px', 
+                  height: '8px', 
+                  background: '#4ade80', 
+                  borderRadius: '50%',
+                  animation: 'pulse 1.5s ease-in-out infinite'
+                }}></span>
+                <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '12px' }}>Live Now</span>
               </div>
-            </div>
-            <div style={{ textAlign: 'center', borderLeft: '1px solid rgba(255,255,255,0.3)', paddingLeft: '20px' }}>
-              <p style={{ color: 'rgba(255,255,255,0.8)' }}>Total Today</p>
-              <p style={{ fontSize: '32px', fontWeight: 'bold', color: 'white' }}>{totalVisitors}</p>
             </div>
           </div>
         </div>
 
-        {/* Website Cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', marginBottom: '30px' }}>
+        {/* 4 Website Cards */}
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', 
+          gap: '16px', 
+          marginBottom: '24px' 
+        }}>
           {websites.map((site, index) => (
             <div key={index} style={{ 
-              background: 'white', 
-              borderRadius: '15px', 
+              background: 'rgba(255,255,255,0.03)',
+              backdropFilter: 'blur(10px)',
+              borderRadius: '16px', 
               padding: '20px',
-              boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-              transition: 'transform 0.3s'
+              border: '1px solid rgba(255,255,255,0.06)',
+              transition: 'transform 0.2s'
             }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-                <h3 style={{ fontSize: '20px', fontWeight: 'bold', color: '#333' }}>{site.name}</h3>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <span style={{ fontSize: '28px' }}>{site.icon}</span>
+                  <h3 style={{ fontSize: '16px', fontWeight: '600', color: 'white' }}>{site.name}</h3>
+                </div>
                 <span style={{ 
-                  padding: '5px 10px', 
-                  borderRadius: '20px', 
-                  fontSize: '12px',
-                  fontWeight: 'bold',
-                  background: getStatusColor(site.status),
-                  color: 'white'
+                  padding: '4px 10px', 
+                  borderRadius: '12px', 
+                  fontSize: '10px',
+                  fontWeight: '600',
+                  background: getStatusBg(site.status),
+                  color: getStatusColor(site.status),
+                  border: `1px solid ${getStatusColor(site.status)}33`
                 }}>
                   {getStatusText(site.status)}
                 </span>
               </div>
               
-              <p style={{ color: '#666', fontSize: '12px', marginBottom: '15px', wordBreak: 'break-all' }}>
-                {site.url}
+              <p style={{ color: 'rgba(255,255,255,0.2)', fontSize: '11px', marginBottom: '14px', wordBreak: 'break-all' }}>
+                {site.url.replace('https://', '')}
               </p>
               
-              {/* Performance bar */}
-              <div style={{ marginBottom: '15px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
-                  <span style={{ fontSize: '12px', color: '#666' }}>Performance</span>
-                  <span style={{ fontSize: '12px', fontWeight: 'bold' }}>{site.performance}%</span>
+              {/* LIVE VISITOR COUNT */}
+              <div style={{ 
+                background: `linear-gradient(135deg, ${site.color}15 0%, ${site.color}05 100%)`, 
+                borderRadius: '12px', 
+                padding: '14px',
+                marginBottom: '14px',
+                border: `1px solid ${site.color}20`
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <p style={{ fontSize: '10px', color: site.color, fontWeight: '600', letterSpacing: '0.5px' }}>
+                      LIVE VISITORS
+                    </p>
+                    <p style={{ fontSize: '36px', fontWeight: 'bold', color: site.color }}>
+                      {site.visitors}
+                    </p>
+                    <p style={{ fontSize: '10px', color: 'rgba(255,255,255,0.3)' }}>
+                      active right now
+                    </p>
+                  </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '40px' }}>👥</div>
+                    {site.visitors > 0 && (
+                      <div style={{ 
+                        fontSize: '10px', 
+                        color: '#4ade80',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        justifyContent: 'center'
+                      }}>
+                        <span style={{ 
+                          display: 'inline-block', 
+                          width: '6px', 
+                          height: '6px', 
+                          background: '#4ade80', 
+                          borderRadius: '50%',
+                          animation: 'pulse 1s ease-in-out infinite'
+                        }}></span>
+                        Live
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <div style={{ background: '#e5e7eb', borderRadius: '10px', height: '8px', overflow: 'hidden' }}>
+                <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '8px', marginTop: '8px' }}>
+                  <p style={{ fontSize: '10px', color: 'rgba(255,255,255,0.3)' }}>
+                    📊 Today: <strong style={{ color: 'white' }}>{site.totalToday}</strong> visitors
+                  </p>
+                </div>
+              </div>
+              
+              {/* Performance bar */}
+              <div style={{ marginBottom: '12px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                  <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)' }}>Performance</span>
+                  <span style={{ fontSize: '10px', fontWeight: '600', color: 'white' }}>{site.performance}%</span>
+                </div>
+                <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: '8px', height: '4px', overflow: 'hidden' }}>
                   <div style={{ 
                     width: `${site.performance}%`, 
                     height: '100%', 
@@ -196,71 +347,93 @@ export default function Home() {
                 </div>
               </div>
               
-              {/* Stats */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '15px' }}>
-                <div style={{ textAlign: 'center', padding: '10px', background: '#f3f4f6', borderRadius: '10px' }}>
-                  <p style={{ fontSize: '11px', color: '#666' }}>Response Time</p>
-                  <p style={{ fontSize: '18px', fontWeight: 'bold', color: '#333' }}>{site.responseTime || 'N/A'}ms</p>
+              {/* Response & Ping */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                <div style={{ textAlign: 'center', padding: '6px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px' }}>
+                  <p style={{ fontSize: '8px', color: 'rgba(255,255,255,0.3)' }}>Response</p>
+                  <p style={{ fontSize: '12px', fontWeight: '600', color: 'white' }}>{site.responseTime || 'N/A'}ms</p>
                 </div>
-                <div style={{ textAlign: 'center', padding: '10px', background: '#f3f4f6', borderRadius: '10px' }}>
-                  <p style={{ fontSize: '11px', color: '#666' }}>Ping</p>
-                  <p style={{ fontSize: '18px', fontWeight: 'bold', color: '#333' }}>{site.ping || 'N/A'}ms</p>
+                <div style={{ textAlign: 'center', padding: '6px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px' }}>
+                  <p style={{ fontSize: '8px', color: 'rgba(255,255,255,0.3)' }}>Ping</p>
+                  <p style={{ fontSize: '12px', fontWeight: '600', color: 'white' }}>{site.ping || 'N/A'}ms</p>
                 </div>
               </div>
-              
-              {site.statusCode && site.statusCode > 0 && (
-                <div style={{ textAlign: 'center', padding: '5px', background: '#fef3c7', borderRadius: '5px' }}>
-                  <span style={{ fontSize: '11px', color: '#d97706' }}>HTTP {site.statusCode}</span>
-                </div>
-              )}
             </div>
           ))}
         </div>
 
-        {/* Recent Visitors */}
-        <div style={{ background: 'white', borderRadius: '15px', padding: '20px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
-          <h3 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '15px' }}>🕒 Recent Visitors</h3>
-          <div style={{ overflow: 'auto', maxHeight: '300px' }}>
-            {recentVisitors.length === 0 ? (
-              <p style={{ textAlign: 'center', color: '#666', padding: '20px' }}>No visitors yet. Be the first!</p>
-            ) : (
-              recentVisitors.map((visitor, index) => (
-                <div key={index} style={{ 
-                  padding: '10px', 
-                  borderBottom: '1px solid #e5e7eb',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center'
-                }}>
-                  <div>
-                    <p style={{ fontWeight: '500' }}>Visitor #{recentVisitors.length - index}</p>
-                    <p style={{ fontSize: '12px', color: '#666' }}>{new Date(visitor.timestamp).toLocaleTimeString()}</p>
-                  </div>
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <span style={{ fontSize: '11px', padding: '2px 8px', background: '#e0e7ff', color: '#4338ca', borderRadius: '10px' }}>
-                      {visitor.browser}
-                    </span>
-                    <span style={{ fontSize: '11px', padding: '2px 8px', background: '#fce7f3', color: '#be185d', borderRadius: '10px' }}>
-                      {visitor.os}
-                    </span>
-                  </div>
-                </div>
-              ))
-            )}
+        {/* Status Summary */}
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', 
+          gap: '12px',
+          marginBottom: '20px'
+        }}>
+          <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: '12px', padding: '12px', textAlign: 'center' }}>
+            <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#4ade80' }}>
+              {websites.filter(w => w.status === 'up').length}
+            </p>
+            <p style={{ fontSize: '10px', color: 'rgba(255,255,255,0.3)' }}>🟢 Online</p>
+          </div>
+          <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: '12px', padding: '12px', textAlign: 'center' }}>
+            <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#fbbf24' }}>
+              {websites.filter(w => w.status === 'warning').length}
+            </p>
+            <p style={{ fontSize: '10px', color: 'rgba(255,255,255,0.3)' }}>🟡 Warning</p>
+          </div>
+          <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: '12px', padding: '12px', textAlign: 'center' }}>
+            <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#f87171' }}>
+              {websites.filter(w => w.status === 'down').length}
+            </p>
+            <p style={{ fontSize: '10px', color: 'rgba(255,255,255,0.3)' }}>🔴 Offline</p>
+          </div>
+          <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: '12px', padding: '12px', textAlign: 'center' }}>
+            <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#a78bfa' }}>
+              {totalActiveVisitors}
+            </p>
+            <p style={{ fontSize: '10px', color: 'rgba(255,255,255,0.3)' }}>👥 Active</p>
           </div>
         </div>
 
-        {/* Footer */}
-        <div style={{ marginTop: '20px', textAlign: 'center', color: 'rgba(255,255,255,0.7)', fontSize: '12px' }}>
-          <p>🔄 Auto-refresh every 10 seconds | Last update: {lastUpdate.toLocaleTimeString()}</p>
-          <p style={{ marginTop: '5px' }}>Monitoring: web-islam.vercel.app | produk-garage.vercel.app | kanshi-craft-merchandise.vercel.app</p>
+        {/* Logs */}
+        <div style={{ 
+          background: 'rgba(255,255,255,0.03)', 
+          borderRadius: '12px', 
+          padding: '16px',
+          backdropFilter: 'blur(10px)',
+          border: '1px solid rgba(255,255,255,0.04)'
+        }}>
+          <h3 style={{ fontSize: '13px', fontWeight: '600', color: 'rgba(255,255,255,0.6)', marginBottom: '10px' }}>
+            📝 Activity Logs
+          </h3>
+          <div style={{ maxHeight: '120px', overflow: 'auto' }}>
+            {logs.map((log, index) => (
+              <div key={index} style={{ 
+                padding: '4px 0', 
+                borderBottom: '1px solid rgba(255,255,255,0.03)',
+                fontSize: '10px',
+                color: 'rgba(255,255,255,0.3)',
+                fontFamily: 'monospace'
+              }}>
+                {log}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Footer - with suppressHydrationWarning */}
+        <div style={{ marginTop: '16px', textAlign: 'center', color: 'rgba(255,255,255,0.15)', fontSize: '10px' }}>
+          <p suppressHydrationWarning>
+            🔄 Auto-refresh every 5s | Last update: {lastUpdate.toLocaleTimeString()}
+          </p>
+          <p style={{ marginTop: '4px' }}>4 websites: produk-garage | produk-hrs | cdp-team | asc-garage</p>
         </div>
       </div>
 
       <style jsx>{`
         @keyframes pulse {
           0%, 100% { opacity: 1; }
-          50% { opacity: 0.5; }
+          50% { opacity: 0.3; }
         }
       `}</style>
     </div>
