@@ -28,9 +28,9 @@ const CONFIG = {
     //   'https://xyz.trycloudflare.com'
     //   'https://mytunnel.local'
     // ============================================
-    tunnelUrl:   'https://your-tunnel-url.example.com',
+    tunnelUrl:   'http://maps-aids-attend-stranger.trycloudflare.com/monitor/',
     tunnelLabel: 'Tunnel Endpoint',
-    openInNewTab: true, // true = buka tab baru, false = redirect
+    openInNewTab: false, // true = buka tab baru, false = redirect
 
     // ============================================
     // WARNA TEMA (ACCENT)
