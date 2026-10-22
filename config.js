@@ -28,7 +28,7 @@ const CONFIG = {
     //   'https://xyz.trycloudflare.com'
     //   'https://mytunnel.local'
     // ============================================
-    tunnelUrl:   'http://maps-aids-attend-stranger.trycloudflare.com/monitor/',
+    tunnelUrl:   'https://centered-blocked-neural-taken.trycloudflare.com/monitor/',
     tunnelLabel: 'Tunnel Endpoint',
     openInNewTab: false, // true = buka tab baru, false = redirect
 
