@@ -17,8 +17,8 @@ const CONFIG = {
     // ============================================
     // ASSET (LOGO & BACKGROUND)
     // ============================================
-    logo:       'https://litter.catbox.moe/3h6b0h.jpg',
-    background: 'https://litter.catbox.moe/ms4fcd.jpg',
+    logo:       'https://files.catbox.moe/m29tu7.jpg',
+    background: 'https://files.catbox.moe/x9hrgm.jpg',
 
     // ============================================
     // TUNNEL — URL XAMPP ANDA
