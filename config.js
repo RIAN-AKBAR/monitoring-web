@@ -28,7 +28,7 @@ const CONFIG = {
     //   'https://xyz.trycloudflare.com'
     //   'https://mytunnel.local'
     // ============================================
-    tunnelUrl:   'https://fix-structures-wallace-lobby.trycloudflare.com/monitor/',
+    tunnelUrl:   'https://association-dimensional-happened-digest.trycloudflare.com/monitor/',
     tunnelLabel: 'Tunnel Endpoint',
     openInNewTab: false, // true = buka tab baru, false = redirect
 
