@@ -28,7 +28,7 @@ const CONFIG = {
     //   'https://xyz.trycloudflare.com'
     //   'https://mytunnel.local'
     // ============================================
-    tunnelUrl:   'https://acids-evans-champion-tulsa.trycloudflare.com/monitor/',
+    tunnelUrl:   'silverhold-hosting.web.id/monitor/',
     tunnelLabel: 'Tunnel Endpoint',
     openInNewTab: false, // true = buka tab baru, false = redirect
 
